@@ -3,11 +3,11 @@ P2P Tic-Tac-Toe
 
 ##Description
 
-This software is a Tic-Tac-Toe network where players can log on, play rounds of Tic-Tac-Toe with each other and log off. Players can
+This software is a peer-to-peer Tic-Tac-Toe network where players can log on, play rounds of Tic-Tac-Toe with each other and log off. Players can
 optionally connect to a "Registry" which stores the connection information of all currently connected players. Players communicate
-with each other in P2P fashion. They may connect with each other directly (if the other player's URL is known) or they may connect
+with each other in peer-to-peer fashion. They may connect with each other directly (if the other player's URL is known) or they may connect
 through the Registry. Note that the Registry only forwards the connection information. No matter how players connect, the games are
-always P2P.
+always peer-to-peer.
 
 ##License
 
@@ -21,7 +21,7 @@ The final goal of compiling the source is to produce two jar files:
 * Player.jar, an executable jar file, to be placed in bin/player
 * Registry.jar, to be placed in bin/registry
 
-This project uses the [Apache Ant build system](http://http://ant.apache.org/ "Ant Homepage").
+This project uses the [Apache Ant build system](http://ant.apache.org/ "Ant Homepage").
 [This](http://ant.apache.org/manual/tutorial-HelloWorldWithAnt.html "Ant tutorial") is a tutorial for using Ant.
 
 Note that to properly install Ant, __two environment variables must be added__, JAVA_HOME which stores the path to the JRE installation
@@ -117,7 +117,7 @@ P2P Tic-Tac-Toe Copyright (c) 2014 Shachar Avni. All rights reserved.
 
 P2P Tic-Tac-Toe makes use of the following third-party software:
 
-* [Apache Axis](http://http://axis.apache.org/axis/ "Axis Homepage")
+* [Apache Axis](http://axis.apache.org/axis/ "Axis Homepage")
   Copyright (c) 2000-2005 The Apache Software Foundation
 
 * [Apache Commons libraries](http://commons.apache.org/ "Apache Commons Homepage")
