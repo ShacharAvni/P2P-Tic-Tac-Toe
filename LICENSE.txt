@@ -1,0 +1,79 @@
+P2P Tic-Tac-Toe
+
+Copyright (c) 2014 Shachar Avni. All rights reserved.
+ 
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, modify, distribute, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+a) Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+b) Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+======================================================================================
+
+The images in bin/player are Copyright (c) 2014 Shachar Avni
+and are distributed under the Creative Commons Attribution 3.0 Unported license
+
+http://creativecommons.org/licenses/by/3.0/
+
+You are free:
+
+to Share — to copy, distribute and transmit the work
+to Remix — to adapt the work
+to make commercial use of the work
+
+Under the following conditions:
+
+Attribution — You must attribute this work to Shachar Avni (http://www.shacharavni.com)
+
+With the understanding that:
+
+Waiver — Any of the above conditions can be waived if you get permission from the
+copyright holder.
+
+Public Domain — Where the work or any of its elements is in the public domain under
+applicable law, that status is in no way affected by the license.
+
+Other Rights — In no way are any of the following rights affected by the license:
+Your fair dealing or fair use rights, or other applicable copyright exceptions and
+limitations;
+The author's moral rights;
+Rights other persons may have either in the work itself or in how the work is used,
+such as publicity or privacy rights.
+
+Notice — For any reuse or distribution, you must make clear to others the license
+terms of this work. The best way to do this is with a link to
+http://creativecommons.org/licenses/by/3.0/
+
+======================================================================================
+
+Third-Party Software
+
+This Software includes software developed by others, and the use of such contributions
+is subject to the terms of the respective developer’s license agreement, copies of which
+may be found in the accompanying files. This third-party software and their licenses are
+identified as follows:
+
+Activation Framework (activation.jar), See accompanying activation.jar.LICENSE.txt and activation.jar.distributionREADME.txt
+Axis (axis.jar,axis-ant.jar,jaxrpc.jar,saaj.jar,wsdl4j-1.5.1.jar), See accompanying Apache.LICENSE-2_0.txt
+Apache Commons libraries (commons-discovery-0.2.jar, commons-logging-1.0.4.jar), See accompanying Apache.LICENSE-2_0.txt
+Apache XML Commons(xml-apis.jar), See accompanying Apache.LICENSE-2_0.txt
+Log4J (log4j-1.2.8.jar), See accompanying Apache.LICENSE-2_0.txt
+JavaMail (mail.jar), See accompanying mail.jar.COPYRIGHT.txt, mail.jar.LICENSE.txt, and mail.jar.distributionREADME.txt
+Xerces (xerces.jar), See accompanying Apache.LICENSE-2_0.txt

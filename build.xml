@@ -1,0 +1,53 @@
+<!--
+   This file is part of P2P Tic-Tac-Toe
+
+   Copyright (c) 2014 Shachar Avni. All rights reserved.
+
+   Use of this file is governed by a BSD-style license. See the accompanying LICENSE.txt for details
+-->
+
+<project default="all">
+
+   <property name="jar-manifest-classpath" value="../../third-party/lib/activation.jar ../../third-party/lib/mail.jar ../../third-party/lib/axis.jar ../../third-party/lib/axis-ant.jar ../../third-party/lib/commons-discovery-0.2.jar ../../third-party/lib/commons-logging-1.0.4.jar ../../third-party/lib/jaxrpc.jar ../../third-party/lib/log4j-1.2.8.jar ../../third-party/lib/saaj.jar ../../third-party/lib/wsdl4j-1.5.1.jar ../../third-party/lib/xerces.jar ../../third-party/lib/xml-apis.jar"/>
+
+   <path id="master-classpath">
+      <fileset dir="third-party/lib">
+         <include name="*.jar"/>
+      </fileset>
+   </path>
+
+   <target name="clean">
+      <delete dir="classes"/>
+      <delete file="bin/player/Player.jar"/>
+      <delete file="bin/registry/Registry.jar"/>
+   </target>
+
+   <target name="compile">
+      <mkdir dir="classes"/>
+      <javac destdir="classes" includeantruntime="false">
+         <src path="src"/>
+         <classpath refid="master-classpath"/>
+      </javac>
+   </target>
+
+   <target name="jar">
+      <jar destfile="bin/player/Player.jar" basedir="classes" includes="player/**">
+         <manifest>
+            <attribute name="Main-Class" value="player.Main"/>
+            <attribute name="Class-Path" value="${jar-manifest-classpath}"/>
+         </manifest>
+      </jar>
+      <jar destfile="bin/registry/Registry.jar" basedir="classes" includes="registry/**">
+         <manifest>
+            <attribute name="Class-Path" value="${jar-manifest-classpath}"/>
+         </manifest>
+      </jar>
+   </target>
+
+   <target name="run">
+      <java jar="bin/player/Player.jar" fork="true"/>
+   </target>
+
+   <target name="all" depends="clean, compile, jar, run"/>
+
+</project>
