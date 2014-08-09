@@ -3,11 +3,11 @@ P2P Tic-Tac-Toe
 
 ##Description
 
-This software is a peer-to-peer Tic-Tac-Toe network where players can log on, play rounds of Tic-Tac-Toe with each other and log off. Players can
-optionally connect to a "Registry" which stores the connection information of all currently connected players. Players communicate
-with each other in peer-to-peer fashion. They may connect with each other directly (if the other player's URL is known) or they may connect
-through the Registry. Note that the Registry only forwards the connection information. No matter how players connect, the games are
-always peer-to-peer.
+This software is a peer-to-peer Tic-Tac-Toe network where players can log on, play rounds of Tic-Tac-Toe with each other and log off.
+
+##Code Review
+
+If you wish to review the code for P2P Tic-Tac-Toe, please see README_CODE_REVIEW.txt.
 
 ##License
 
@@ -60,6 +60,9 @@ Should the default port (stored in bin/player/settings.ini) be unusable, the pro
 numbers until one is free. Many players can play on the same computer though the intended scenario is one player per computer.
 
 ##Starting the Registry
+
+The Registry stores the connection information of all currently connected players. Players may connect with each other directly
+(if the other player's URL is known) or they may connect through the Registry.
 
 You should have the JRE bin folder on the system path.
 
