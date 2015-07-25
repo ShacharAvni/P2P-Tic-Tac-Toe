@@ -10,13 +10,20 @@
 
 package player.networking.node;
 
-import player.*;
-
-import player.networking.*;
-import player.networking.messages.*;
-import player.ui.*;
-
 import java.util.Vector;
+
+import player.Parser;
+import player.networking.Endpoint;
+import player.networking.Receiver;
+import player.networking.Sender;
+import player.networking.StrangeAxisException;
+import player.networking.Subscriber;
+import player.networking.WebServiceException;
+import player.networking.messages.Forfeit;
+import player.networking.messages.Invitation;
+import player.networking.messages.Message;
+import player.networking.messages.Move;
+import player.ui.GUI;
 
 /*
  * The PlayerNode class represents a node in the Tic-Tac-Toe network. Its
@@ -31,25 +38,25 @@ import java.util.Vector;
 
 public final class PlayerNode implements Subscriber
 {
-   //This reference is used for showing message boxes and for forwarding opponent moves.
-   //The PlayerNode also controls when certain menu items are enabled.
+   // This reference is used for showing message boxes and for forwarding opponent moves.
+   // The PlayerNode also controls when certain menu items are enabled.
    private GUI gui;
 
-   //All incoming Messages (described in Message.java) come through the Receiver (described
-   //in Receiver.java). The PlayerNode starts the Receiver's listening loop as well as kills
-   //it on program termination
+   // All incoming Messages (described in Message.java) come through the Receiver (described
+   // in Receiver.java). The PlayerNode starts the Receiver's listening loop as well as kills
+   // it on program termination
    private Receiver receiver;
 
-   //Connection state. This state needs to be synchronized as it is accessed by both the
-   //GUI and Receiver threads. Any methods in this class emanating from the GUI thread
-   //or the Receiver thread need to acquire a lock on this state. Message objects obtain
-   //and update this state. There would be less state to synchronize if multiple games
-   //were allowed to be played at once. (see ConnectionState.java for the class definition)
+   // Connection state. This state needs to be synchronized as it is accessed by both the
+   // GUI and Receiver threads. Any methods in this class emanating from the GUI thread
+   // or the Receiver thread need to acquire a lock on this state. Message objects obtain
+   // and update this state. There would be less state to synchronize if multiple games
+   // were allowed to be played at once. (see ConnectionState.java for the class definition)
    private ConnectionState connectionState;
 
-   //This state doesn't need to be synchronized since it's controlled by the GUI thread.
+   // This state doesn't need to be synchronized since it's controlled by the GUI thread.
    private boolean connectedToRegistry;
-   private String registryURL; //URL where the Registry resides
+   private String registryURL; // URL where the Registry resides
 
    private static final String Registry_Name = "Registry";
 
@@ -73,10 +80,9 @@ public final class PlayerNode implements Subscriber
    }
 
    /*
-    * Getter which gives the caller access to the PlayerNode's
-    * ConnectionState. This is OK since the ConnectionState
-    * doesn't let anyone modify it unless its mutex has been
-    * acquired.
+    * Getter which gives the caller access to the PlayerNode's ConnectionState.
+    * This is OK since the ConnectionState doesn't let anyone modify it unless
+    * its mutex has been acquired.
     */
    public ConnectionState getConnectionState()
    {
@@ -84,9 +90,8 @@ public final class PlayerNode implements Subscriber
    }
 
    /*
-    * Acquires the mutex of the ConnectionState and returns
-    * the ConnectionState. The caller must release() the
-    * ConnectionState when it's done.
+    * Acquires the mutex of the ConnectionState and returns the ConnectionState.
+    * The caller must release() the ConnectionState when it's done.
     */
    public ConnectionState getAndAcquireConnectionState()
    {
@@ -115,14 +120,14 @@ public final class PlayerNode implements Subscriber
     */
    public void quit()
    {
-      if(connectionState.getPlaying())
+      if (connectionState.getPlaying())
       {
          forfeit();
       }
 
       receiver.kill();
 
-      if(connectedToRegistry)
+      if (connectedToRegistry)
       {
          disconnectFromRegistry();
       }
@@ -164,10 +169,10 @@ public final class PlayerNode implements Subscriber
     */
    public void startGame(Endpoint playingEndpoint, boolean firstMove)
    {
-      //This method is called by the Confirmation Message object.
-      //Double check that the connection state has been acquired before
-      //starting the game.
-      if(connectionState.acquired())
+      // This method is called by the Confirmation Message object.
+      // Double check that the connection state has been acquired before
+      // starting the game.
+      if (connectionState.acquired())
       {
          connectionState.setPlaying(true);
          gui.allowForfeits(true);
@@ -190,12 +195,12 @@ public final class PlayerNode implements Subscriber
     */
    public void endGame(final GUI.MessageType messageType, String messageToShow, String logMessage)
    {
-      //This method is called by a few different Message objects.
-      //Double check that the connection state has been acquired before
-      //ending the game.
-      if(connectionState.acquired())
+      // This method is called by a few different Message objects.
+      // Double check that the connection state has been acquired before
+      // ending the game.
+      if (connectionState.acquired())
       {
-         if(logMessage != null)
+         if (logMessage != null)
          {
             gui.addMessage(logMessage);
          }
@@ -267,12 +272,12 @@ public final class PlayerNode implements Subscriber
     */
    private void forfeit()
    {
-      //send a Forfeit Message.
+      // send a Forfeit Message.
       acceptSendMessage(new Forfeit(), connectionState.getPlayingEndpoint(), null);
       setNotPlaying();
 
-      //GUI may not be visible at this point
-      if(gui.isVisible())
+      // GUI may not be visible at this point
+      if (gui.isVisible())
       {
          gui.showMessage("You have forfeited the match", GUI.MessageType.INFORMATION);
       }
@@ -302,32 +307,30 @@ public final class PlayerNode implements Subscriber
     */
    public void concedeMove(final String x, final String y)
    {
-      //We concede the Move in another thread. We need to do this
-      //because addOpponentMove may call won(), lost(), or catsGame().
-      //These methods attempt to acquire the connectionState because
-      //those methods may emanate from the GUI thread. However, in this
-      //case we have already acquired the connectionState (in
-      //acceptReceiveMessage). We can't check in won(), lost(), and
-      //catsGame() if we have acquired the connectionState because we
-      //might end up letting the GUI thread through even though the Receiver
-      //thread has acquired it. Thus, we simply send this in another thread,
-      //call acquire() to block and wait for the calling thread to call
-      //release(), then we immediately release() the state so that the new
-      //thread doesn't block forever if it reaches won(), lost(), or catsGame().
+      // We concede the Move in another thread. We need to do this
+      // because addOpponentMove may call won(), lost(), or catsGame().
+      // These methods attempt to acquire the connectionState because
+      // those methods may emanate from the GUI thread. However, in this
+      // case we have already acquired the connectionState (in
+      // acceptReceiveMessage). We can't check in won(), lost(), and
+      // catsGame() if we have acquired the connectionState because we
+      // might end up letting the GUI thread through even though the Receiver
+      // thread has acquired it. Thus, we simply send this in another thread,
+      // call acquire() to block and wait for the calling thread to call
+      // release(), then we immediately release() the state so that the new
+      // thread doesn't block forever if it reaches won(), lost(), or catsGame().
 
-      PlayerNode.startThread
-      (
-         new Runnable()
+      PlayerNode.startThread(new Runnable()
+      {
+         @Override
+         public void run()
          {
-            public void run()
-            {
-               connectionState.acquire();
-               connectionState.release();
+            connectionState.acquire();
+            connectionState.release();
 
-               gui.addOpponentMove(x, y);
-            }
+            gui.addOpponentMove(x, y);
          }
-      );
+      });
    }
 
    /***********************************************************\
@@ -348,8 +351,8 @@ public final class PlayerNode implements Subscriber
    }
 
    /*
-    * Connects this PlayerNode to the tic-tac-toe player Registry. "url" is the URL of the
-    * Registry.
+    * Connects this PlayerNode to the tic-tac-toe player Registry. "url" is the
+    * URL of the Registry.
     */
    private void connectToRegistry(final String url)
    {
@@ -357,42 +360,41 @@ public final class PlayerNode implements Subscriber
 
       boolean errorInConnecting = true;
 
-      //Connect to the Registry by calling the Registry's "join" function and by requesting
-      //to be added to the subscriber list.
+      // Connect to the Registry by calling the Registry's "join" function and by requesting
+      // to be added to the subscriber list.
 
-      //no need to grab a copy of the userName because we want to send the most up-to-date
-      //userName to the registry
+      // no need to grab a copy of the userName because we want to send the most up-to-date
+      // userName to the registry
 
       try
       {
-         //If an Axis webservice, with the name "Service", is listening at 123.1.123 and port 1212,
-         //then its full URL is http://123.1.123:1212/axis/services/Service
+         // If an Axis webservice, with the name "Service", is listening at 123.1.123 and port 1212,
+         // then its full URL is http://123.1.123:1212/axis/services/Service
          String newRegistryURL = url + "/axis/services/" + PlayerNode.Registry_Name;
 
-         //the following two calls may produce a WebServiceException (described in WebServiceException.java)
+         // the following two calls may produce a WebServiceException (described in WebServiceException.java)
          Sender.sendJoin(newRegistryURL, connectionState.getUserName(), receiver.listeningURL());
          Sender.addSubscriber(newRegistryURL, receiver.listeningURL());
 
-         //the rest of the calls in this block don't throw exceptions
+         // the rest of the calls in this block don't throw exceptions
          setConnectedToRegistry(true);
          errorInConnecting = false;
 
          registryURL = newRegistryURL;
 
-         //get player list from the Registry
+         // get player list from the Registry
          updatePlayers();
 
          gui.addMessage("Connected to " + PlayerNode.Registry_Name + " at: " + url);
       }
       catch (StrangeAxisException e)
       {
-         //in this case, the "StrangeAxisError" means the player tried to connect to some URL that
-         //is not the URL of a Registry
+         // in this case, the "StrangeAxisError" means the player tried to connect to some URL that
          gui.showMessage("Error in connecting to: " + PlayerNode.Registry_Name + " at " + url + "\nError Message: There is no Registry at this URL", GUI.MessageType.ERROR);
       }
       catch (WebServiceException e)
       {
-         if(Sender.isNonUniqueUserException(e.getMessage()))
+         if (Sender.isNonUniqueUserException(e.getMessage()))
          {
             gui.showMessage("A user with this name already exists. Please select a new one", GUI.MessageType.ERROR);
          }
@@ -403,7 +405,7 @@ public final class PlayerNode implements Subscriber
       }
       finally
       {
-         if(errorInConnecting)
+         if (errorInConnecting)
          {
             gui.allowRegistryConnect(true);
          }
@@ -415,37 +417,35 @@ public final class PlayerNode implements Subscriber
     */
    private void disconnectFromRegistry()
    {
-      //disconnect from the Registry by calling the Registry's "leave" function and requesting
-      //to be removed from the subscriber list. This is run in a separate thread to keep the
-      //GUI responsive.
+      // disconnect from the Registry by calling the Registry's "leave" function and requesting
+      // to be removed from the subscriber list. This is run in a separate thread to keep the
+      // GUI responsive.
 
-      //use a copy of the userName and registryURL in case they change in the interim.
+      // use a copy of the userName and registryURL in case they change in the interim.
       final String snapshotUserName = connectionState.getUserName();
       final String snapshotRegistryURL = registryURL;
 
-      PlayerNode.startThread
-      (
-         new Runnable()
+      PlayerNode.startThread(new Runnable()
+      {
+         @Override
+         public void run()
          {
-            public void run()
+            try
             {
-               try
-               {
-                  Sender.removeSubscriber(snapshotRegistryURL, receiver.listeningURL());
-                  Sender.sendLeave(snapshotRegistryURL, snapshotUserName);
+               Sender.removeSubscriber(snapshotRegistryURL, receiver.listeningURL());
+               Sender.sendLeave(snapshotRegistryURL, snapshotUserName);
 
-                  gui.addMessage("Disconnected from Registry");
-               }
-               catch (StrangeAxisException e)
-               {
-               }
-               catch (WebServiceException e)
-               {
-                  gui.showMessage("Error in disconnecting from the Registry. Reverting to unconnected state.\nError Message: " + e.getMessage(), GUI.MessageType.ERROR);
-               }
+               gui.addMessage("Disconnected from Registry");
+            }
+            catch (StrangeAxisException e)
+            {
+            }
+            catch (WebServiceException e)
+            {
+               gui.showMessage("Error in disconnecting from the Registry. Reverting to unconnected state.\nError Message: " + e.getMessage(), GUI.MessageType.ERROR);
             }
          }
-      );
+      });
 
       setConnectedToRegistry(false);
       gui.clearPlayers();
@@ -473,9 +473,9 @@ public final class PlayerNode implements Subscriber
    }
 
    /*
-    * Here we send a Message by taking the instantiated Message and having
-    * the Message send itself. acceptSendMessage and m.send correspond to
-    * the "accept" and "visit" methods of the visitor design pattern.
+    * Here we send a Message by taking the instantiated Message and having the
+    * Message send itself. acceptSendMessage and m.send correspond to the
+    * "accept" and "visit" methods of the visitor design pattern.
     */
    public void acceptSendMessage(Message m, Endpoint endpoint, Object data)
    {
@@ -488,8 +488,8 @@ public final class PlayerNode implements Subscriber
     */
    private void sendInvitation(String opponentURL)
    {
-      //We want to use the fully qualified URL. Replace "localhost" with the
-      //IP of the localhost if need be.
+      // We want to use the fully qualified URL. Replace "localhost" with the
+      // IP of the localhost if need be.
 
       opponentURL = opponentURL.toLowerCase().replace("localhost", receiver.getLocalHostIP());
       acceptSendMessage(new Invitation(), new Endpoint(opponentURL), null);
@@ -502,6 +502,7 @@ public final class PlayerNode implements Subscriber
     * network. This method is required to implement the Subscriber interface. (described in
     * Subscriber.java)
     */
+   @Override
    public void update(String topic, String userName)
    {
       gui.addMessage("Server says: " + userName + " has " + (topic.equals("join") ? "joined" : "left"));
@@ -513,51 +514,49 @@ public final class PlayerNode implements Subscriber
     */
    private void updatePlayers()
    {
-      //Request for a player list update from the Registry in a separate thread.
+      // Request for a player list update from the Registry in a separate thread.
 
-      //Use a copy of the registryURL in case it changes in the interim
+      // Use a copy of the registryURL in case it changes in the interim
       final String snapshotRegistryURL = registryURL;
 
-      PlayerNode.startThread
-      (
-         new Runnable()
+      PlayerNode.startThread(new Runnable()
+      {
+         @Override
+         public void run()
          {
-            public void run()
+            try
             {
-               try
+               // Sender.getPlayerList may throw an Exception. It's also a blocking call. We may have disconnected
+               // from the registry before we got a response.
+               Vector<String> playerList = Parser.getPlayerListFromXML(Sender.getPlayerList(snapshotRegistryURL));
+
+               // check if we're still connected to the registry we sent the request to
+               if (snapshotRegistryURL.equals(registryURL))
                {
-                  //Sender.getPlayerList may throw an Exception. It's also a blocking call. We may have disconnected
-                  //from the registry before we got a response.
-                  Vector<String> playerList = Parser.getPlayerListFromXML(Sender.getPlayerList(snapshotRegistryURL));
+                  connectionState.acquire();
 
-                  //check if we're still connected to the registry we sent the request to
-                  if(snapshotRegistryURL.equals(registryURL))
+                  try
                   {
-                     connectionState.acquire();
-
-                     try
-                     {
-                        playerList.remove(connectionState.getUserName());
-                     }
-                     finally
-                     {
-                        connectionState.release();
-                     }
-
-                     gui.updatePlayers(playerList);
+                     playerList.remove(connectionState.getUserName());
+                  }
+                  finally
+                  {
+                     connectionState.release();
                   }
 
+                  gui.updatePlayers(playerList);
                }
-               catch (StrangeAxisException e)
-               {
-               }
-               catch (WebServiceException e)
-               {
-                  gui.addMessage("Administration says: Error in updating player list");
-               }
+
+            }
+            catch (StrangeAxisException e)
+            {
+            }
+            catch (WebServiceException e)
+            {
+               gui.addMessage("Administration says: Error in updating player list");
             }
          }
-      );
+      });
    }
 
    /***********************************************************\
@@ -596,14 +595,14 @@ public final class PlayerNode implements Subscriber
    {
       String url = gui.getURL("Please input the " + (forRegistry ? "Registry" : "player") + "'s IP Address and port", "localhost:" + receiver.getPort());
 
-      if(url == null)
+      if (url == null)
       {
          return null;
       }
 
       url = url.trim();
 
-      if(url.length() == 0)
+      if (url.length() == 0)
       {
          gui.showMessage("Connection cancelled", GUI.MessageType.INFORMATION);
          return null;
@@ -613,14 +612,14 @@ public final class PlayerNode implements Subscriber
       //Place "http://" in front of the inputted URL if it's not there
       url = Parser.completeURL(url);
 
-      if(!Parser.isValidURL(url))
+      if (!Parser.isValidURL(url))
       {
          gui.showMessage("URL entered is invalid", GUI.MessageType.ERROR);
          return null;
       }
 
-      //check if the user inputted their own connection information
-      if(Parser.stringMatches(url.toLowerCase(), "localhost:" + receiver.getPort()) || Parser.stringMatches(url, receiver.getLocalHostIP() + ":" + receiver.getPort()))
+      // check if the user inputted their own connection information
+      if (Parser.stringMatches(url.toLowerCase(), "localhost:" + receiver.getPort()) || Parser.stringMatches(url, receiver.getLocalHostIP() + ":" + receiver.getPort()))
       {
          gui.showMessage(forRegistry ? "There is no Registry at this URL" : "Sorry, you can't play with yourself", GUI.MessageType.ERROR);
          return null;
@@ -640,45 +639,43 @@ public final class PlayerNode implements Subscriber
 
       try
       {
-         if(connectionState.getWaitingResponse())
+         if (connectionState.getWaitingResponse())
          {
-            //Ask if the player wants to cancel the invitation in
-            //a separate thread. This is because of the blocking
-            //call getWantToCancelInvitation(). See GUI.java for
-            //an explanation.
-            PlayerNode.startThread
-            (
-               new Runnable()
+            // Ask if the player wants to cancel the invitation in
+            // a separate thread. This is because of the blocking
+            // call getWantToCancelInvitation(). See GUI.java for
+            // an explanation.
+            PlayerNode.startThread(new Runnable()
+            {
+               @Override
+               public void run()
                {
-                  public void run()
+                  boolean wantToCancel = gui.getWantToCancelInvitation();
+
+                  if (wantToCancel)
                   {
-                     boolean wantToCancel = gui.getWantToCancelInvitation();
+                     connectionState.acquire();
 
-                     if(wantToCancel)
+                     try
                      {
-                        connectionState.acquire();
-
-                        try
+                        if (connectionState.getWaitingResponse())
                         {
-                           if(connectionState.getWaitingResponse())
-                           {
-                              connectionState.setWaitingResponse(false);
-                              connectionState.setWaitingResponseURL("");
-                              gui.allowInvitations(true);
-                           }
-                           else if(connectionState.getPlaying())
-                           {
-                              gui.showMessage("Error in cancelling the invitation. The match has already started.", GUI.MessageType.ERROR);
-                           }
+                           connectionState.setWaitingResponse(false);
+                           connectionState.setWaitingResponseURL("");
+                           gui.allowInvitations(true);
                         }
-                        finally
+                        else if (connectionState.getPlaying())
                         {
-                           connectionState.release();
+                           gui.showMessage("Error in cancelling the invitation. The match has already started.", GUI.MessageType.ERROR);
                         }
+                     }
+                     finally
+                     {
+                        connectionState.release();
                      }
                   }
                }
-            );
+            });
          }
       }
       finally
@@ -696,44 +693,42 @@ public final class PlayerNode implements Subscriber
    {
       final String url = getURLFromUser(true);
 
-      if(url != null)
+      if (url != null)
       {
-         //See GUI.java for an explanation as to why getUserNameFromUser()
-         //is called in a separate thread.
-         PlayerNode.startThread
-         (
-            new Runnable()
+         // See GUI.java for an explanation as to why getUserNameFromUser()
+         // is called in a separate thread.
+         PlayerNode.startThread(new Runnable()
+         {
+            @Override
+            public void run()
             {
-               public void run()
+               // the user name used for the registry cancels out
+               // the user name entered previously.
+               String newUserName = gui.getUserNameFromUser(true);
+
+               connectionState.acquire();
+
+               try
                {
-                  //the user name used for the registry cancels out
-                  //the user name entered previously.
-                  String newUserName = gui.getUserNameFromUser(true);
-
-                  connectionState.acquire();
-
-                  try
-                  {
-                     connectionState.setUserName(newUserName);
-                     connectToRegistry(url);
-                  }
-                  finally
-                  {
-                     connectionState.release();
-                  }
+                  connectionState.setUserName(newUserName);
+                  connectToRegistry(url);
+               }
+               finally
+               {
+                  connectionState.release();
                }
             }
-         );
+         });
       }
    }
 
    /*
-    * Disconnects from the Registry after asking the player for confirmation. This method
-    * call emanates from the GUI thread.
+    * Disconnects from the Registry after asking the player for confirmation.
+    * This method call emanates from the GUI thread.
     */
    public void tryDisconnectFromRegistry()
    {
-      if(gui.getWantToDisconnectFromRegistry())
+      if (gui.getWantToDisconnectFromRegistry())
       {
          connectionState.acquire();
 
@@ -757,20 +752,20 @@ public final class PlayerNode implements Subscriber
    {
       String url = getURLFromUser(false);
 
-      if(url != null)
+      if (url != null)
       {
-         //If the user doesn't have a user name, then we need to ask them to provide one.
-         //However, getUserNameFromUser is a blocking call so we should ask for the user
-         //name before acquiring the connection state. If we see that the user has a user
-         //name after acquiring the connection state, then we don't assign them this one
-         //as the user must have entered a user name in another thread.
+         // If the user doesn't have a user name, then we need to ask them to provide one.
+         // However, getUserNameFromUser is a blocking call so we should ask for the user
+         // name before acquiring the connection state. If we see that the user has a user
+         // name after acquiring the connection state, then we don't assign them this one
+         // as the user must have entered a user name in another thread.
          //
-         //See GUI.java for an explanation of this awkwardness.
+         // See GUI.java for an explanation of this awkwardness.
 
          boolean shouldChangeUserName = connectionState.getUserName().equals("");
          String newUserName = "";
 
-         if(shouldChangeUserName)
+         if (shouldChangeUserName)
          {
             newUserName = gui.getUserNameFromUser(false);
          }
@@ -779,10 +774,10 @@ public final class PlayerNode implements Subscriber
 
          try
          {
-            if(!connectionState.getPlaying() && !connectionState.getWaitingConfirmation())
+            if (!connectionState.getPlaying() && !connectionState.getWaitingConfirmation())
             {
-               //assign the new user name if applicable
-               if(shouldChangeUserName && connectionState.getUserName().equals(""))
+               // assign the new user name if applicable
+               if (shouldChangeUserName && connectionState.getUserName().equals(""))
                {
                   connectionState.setUserName(newUserName);
                }
@@ -791,8 +786,8 @@ public final class PlayerNode implements Subscriber
             }
             else
             {
-               //this happens if this player has started another match or has
-               //accepted an invitation before entering the URL or user name above.
+               // this happens if this player has started another match or has
+               // accepted an invitation before entering the URL or user name
                gui.showMessage("Invitation cancelled: You have already " + (connectionState.getPlaying() ? "started a match" : "accepted another invitation"), GUI.MessageType.INFORMATION);
             }
          }
@@ -804,9 +799,9 @@ public final class PlayerNode implements Subscriber
    }
 
    /*
-    * Attempts to start a game with an opponent. Here, the opponent was selected from
-    * the GUI's list of users currently connected to the Registry. This method call
-    * emanates from the GUI thread.
+    * Attempts to start a game with an opponent. Here, the opponent was selected
+    * from the GUI's list of users currently connected to the Registry. This
+    * method call emanates from the GUI thread.
     */
    public void tryPlay(String opponentUserName)
    {
@@ -821,7 +816,7 @@ public final class PlayerNode implements Subscriber
       }
       catch (WebServiceException e)
       {
-         if(Sender.isUserDoesNotExistException(e.getMessage()))
+         if (Sender.isUserDoesNotExistException(e.getMessage()))
          {
             endGame(GUI.MessageType.ERROR, "User " + opponentUserName + " has unexpectedly disconnected. Reacquiring player list", "Error in sending invitation to: " + opponentUserName);
             updatePlayers();
@@ -841,25 +836,25 @@ public final class PlayerNode implements Subscriber
    }
 
    /*
-    * Forfeits the current match after asking the player for confirmation. This method
-    * call emanates from the GUI thread.
+    * Forfeits the current match after asking the player for confirmation. This
+    * method call emanates from the GUI thread.
     */
    public void tryForfeit()
    {
-      if(gui.getWantToForfeit())
+      if (gui.getWantToForfeit())
       {
          connectionState.acquire();
 
          try
          {
-            if(connectionState.getPlaying())
+            if (connectionState.getPlaying())
             {
                forfeit();
             }
             else
             {
-               //this occurs when the player selects forfeit, but then the game ends from
-               //the opponent's next move.
+               // this occurs when the player selects forfeit, but then the game ends from
+               // the opponent's next move.
                gui.showMessage("Error in forfeiting the match: the match has already finished.", GUI.MessageType.ERROR);
             }
          }
@@ -879,23 +874,21 @@ public final class PlayerNode implements Subscriber
 
       try
       {
-         if(connectionState.getPlaying())
+         if (connectionState.getPlaying())
          {
-            //See GUI.java for an explanation as to why getWantToForfeitAndQuit()
-            //is called in a separate thread.
-            PlayerNode.startThread
-            (
-               new Runnable()
+            // See GUI.java for an explanation as to why getWantToForfeitAndQuit()
+            // is called in a separate thread.
+            PlayerNode.startThread(new Runnable()
+            {
+               @Override
+               public void run()
                {
-                  public void run()
+                  if (gui.getWantToForfeitAndQuit())
                   {
-                     if(gui.getWantToForfeitAndQuit())
-                     {
-                        gui.quit();
-                     }
+                     gui.quit();
                   }
                }
-            );
+            });
          }
          else
          {

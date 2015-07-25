@@ -17,8 +17,8 @@ package player.networking;
 
 public final class Endpoint implements Cloneable
 {
-   public String url; //the url where this endpoint resides
-   public String userName; //the user name of the player listening at url
+   public String url; // the url where this endpoint resides
+   public String userName; // the user name of the player listening at url
 
    /*
     * Endpoint Constructor.
@@ -50,15 +50,16 @@ public final class Endpoint implements Cloneable
    /*
     * Standard clone method.
     */
+   @Override
    public Endpoint clone()
    {
       try
       {
-         return (Endpoint) super.clone(); //shallow copy is OK because we're dealing with Strings
+         return (Endpoint) super.clone(); // shallow copy is OK because we're dealing with Strings
       }
-      catch(CloneNotSupportedException e)
+      catch (CloneNotSupportedException e)
       {
-         //this should never happen
+         // this should never happen
          player.Logger.logError("Unexpected Error in cloning Endpoint", e);
          return new Endpoint(url, userName);
       }
@@ -67,13 +68,14 @@ public final class Endpoint implements Cloneable
    /*
     * Standard equals method.
     */
+   @Override
    public boolean equals(Object object)
    {
-      if(this == object)
+      if (this == object)
       {
          return true;
       }
-      else if( !(object instanceof Endpoint) || (object == null) )
+      else if ( !(object instanceof Endpoint) || (object == null) )
       {
          return false;
       }

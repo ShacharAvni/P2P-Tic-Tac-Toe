@@ -10,11 +10,14 @@
 
 package player.game;
 
-import player.networking.node.PlayerNode;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import javax.swing.JPanel;
+
+import player.networking.node.PlayerNode;
 
 /*
  * The Board class represents the Tic-Tac-Toe game board. It is responsible
@@ -27,21 +30,21 @@ public final class Board extends JPanel
 {
    private static final long serialVersionUID = 1L;
 
-   //This reference is used for forwarding the user's moves as well as
-   //for sending end of game notifications
+   // This reference is used for forwarding the user's moves as well as
+   // for sending end of game notifications
    private PlayerNode playerNode;
 
-   //This flag is true when it's the user's turn
+   // This flag is true when it's the user's turn
    private boolean acceptingMoves;
 
-   //piece constants
+   // piece constants
    private final int PIECE_X = 0;
    private final int PIECE_O = 1;
 
-   //which piece the user is playing with (either X or O)
+   // which piece the user is playing with (either X or O)
    private int playerPiece;
 
-   //grid constants
+   // grid constants
    private final int NUM_ROWS = 3;
    private final int NUM_COLUMNS = 3;
    private final int NUM_CELLS = NUM_ROWS * NUM_COLUMNS;
@@ -55,19 +58,20 @@ public final class Board extends JPanel
    private final int PIECE_WIDTH = BLOCK_WIDTH - 2 * INNER_OFFSET; //the width (and height) of a game piece
 
    /*
-    * A Cell represents a location in the Tic-Tac-Toe grid. The locations are indexed from 0 (top-left)
-    * to 8 (bottom-right). A Cell stores its index in the grid and knows how to get the XML (hereafter MoveXML)
-    * required for a Move Message (see: Move.java) corresponding to its index.
+    * A Cell represents a location in the Tic-Tac-Toe grid. The locations are
+    * indexed from 0 (top-left) to 8 (bottom-right). A Cell stores its index in
+    * the grid and knows how to get the XML (hereafter MoveXML) required for a
+    * Move Message (see: Move.java) corresponding to its index.
     */
 
    private enum Cell
    {
-      //Individual Cell constants
+      // Individual Cell constants
          TOP_LEFT(0),    TOP_MIDDLE(1),    TOP_RIGHT(2),
       MIDDLE_LEFT(3), MIDDLE_MIDDLE(4), MIDDLE_RIGHT(5),
       BOTTOM_LEFT(6), BOTTOM_MIDDLE(7), BOTTOM_RIGHT(8);
 
-      //index into the grid
+      // index into the grid
       private int index;
 
       /*
@@ -87,18 +91,18 @@ public final class Board extends JPanel
       }
 
       /*
-       * Utility method for retrieving the MoveXML from the name of the cell. "cellName" is
-       * one of {"TOP_LEFT", "TOP_MIDDLE", ... , "BOTTOM_RIGHT"}
+       * Utility method for retrieving the MoveXML from the name of the cell.
+       * "cellName" is one of {"TOP_LEFT", "TOP_MIDDLE", ... , "BOTTOM_RIGHT"}
        */
       static String toMoveXML(String cellName)
       {
-         //get the y value for this name (either top, middle, or bottom)
+         // get the y value for this name (either top, middle, or bottom)
          String yVal = player.Parser.findGroup(cellName, "(.*)_", 1).toLowerCase();
 
-         //get the x value for this name (either left, middle, or right)
+         // get the x value for this name (either left, middle, or right)
          String xVal = player.Parser.findGroup(cellName, ".*_(.*)", 1).toLowerCase();
 
-         //construct the XML tag of the MoveXML
+         // construct the XML tag of the MoveXML
          return "<move x='" + xVal + "' y='" + yVal + "' />";
       }
 
@@ -111,27 +115,29 @@ public final class Board extends JPanel
       }
    }
 
-   //the actual board data. Indices in this array match the indices of the cells.
-   //The element at index i stores which piece (if any) is in cell i. A null entry
-   //means the cell is empty
+   // the actual board data. Indices in this array match the indices of the cells.
+   // The element at index i stores which piece (if any) is in cell i. A null entry
+   // means the cell is empty
    private Integer[] moves;
 
-   //the total number of moves (for both players) that have occurred so far in the current match
+   // the total number of moves (for both players) that have occurred so far in the current match
    private int numMoves;
 
-   //The following member variable (after the explanatory paragraph) stores all the possible winning
-   //combinations of cells. This list is iterated over to check for a possible victor after each move
-   //that can possibly end the match.
+   // The following member variable (after the explanatory paragraph) stores all the possible winning
+   // combinations of cells. This list is iterated over to check for a possible victor after each move
+   // that can possibly end the match.
    /*
-    * There are more optimal solutions for this, such as maintaining counters for each row, column
-    * and diagonal (e.g. if one of the counters is at 3 then the current player wins, if one of the
-    * counters is at -3 then the opposing player wins). I implemented the above solution and found that
-    * it added a degree of obfuscation to the code. Also, there is little chance that the board will
-    * increase in size so the unscalability of the current solution is not a concern. Speed is not a
-    * concern either as checking (up to) 8 combinations for each possible game ending move is peanuts.
-    * Thus, I decided to stay with the more legible, brute force solution.
+    * There are more optimal solutions for this, such as maintaining counters
+    * for each row, column and diagonal (e.g. if one of the counters is at 3
+    * then the current player wins, if one of the counters is at -3 then the
+    * opposing player wins). I implemented the above solution and found that it
+    * added a degree of obfuscation to the code. Also, there is little chance
+    * that the board will increase in size so the unscalability of the current
+    * solution is not a concern. Speed is not a concern either as checking (up
+    * to) 8 combinations for each possible game ending move is peanuts. Thus, I
+    * decided to stay with the more legible, brute force solution.
     */
-   private final int[][] winningCombinations = { //horizontals
+   private final int[][] winningCombinations = { // horizontals
                                          {Cell.TOP_LEFT.getIndex()   , Cell.TOP_MIDDLE.getIndex()   , Cell.TOP_RIGHT.getIndex()},
                                          {Cell.MIDDLE_LEFT.getIndex(), Cell.MIDDLE_MIDDLE.getIndex(), Cell.MIDDLE_RIGHT.getIndex()},
                                          {Cell.BOTTOM_LEFT.getIndex(), Cell.BOTTOM_MIDDLE.getIndex(), Cell.BOTTOM_RIGHT.getIndex()},
@@ -150,7 +156,7 @@ public final class Board extends JPanel
     */
    public Board(PlayerNode p)
    {
-      //initialize JPanel base class
+      // initialize JPanel base class
       super();
 
       playerNode = p;
@@ -160,15 +166,16 @@ public final class Board extends JPanel
       moves = new Integer[NUM_CELLS];
       clear();
 
-      //so we can see the background behind the board
+      // so we can see the background behind the board
       setOpaque(false);
 
-      //Start listening for when the player clicks on the board
+      // Start listening for when the player clicks on the board
       addMouseListener(new MouseAdapter()
       {
+         @Override
          public void mouseClicked(MouseEvent e)
          {
-            if(acceptingMoves)
+            if (acceptingMoves)
             {
                processMouseClick(e.getX(), e.getY());
             }
@@ -189,7 +196,7 @@ public final class Board extends JPanel
     */
    public void clear()
    {
-      for(int i = 0; i < NUM_CELLS; i++)
+      for (int i = 0; i < NUM_CELLS; i++)
       {
          moves[i] = null;
       }
@@ -206,15 +213,14 @@ public final class Board extends JPanel
    }
 
    /*
-    * Goes over the whole board and changes all X's to O's and all
-    * O's to X's. This gets called when the user changes their
-    * piece.
+    * Goes over the whole board and changes all X's to O's and all O's to X's.
+    * This gets called when the user changes their piece.
     */
    private void toggleBoard()
    {
-      for(int i = 0; i < NUM_CELLS; i++)
+      for (int i = 0; i < NUM_CELLS; i++)
       {
-         if(moves[i] != null)
+         if (moves[i] != null)
          {
             moves[i] = new Integer( oppositePiece(moves[i].intValue()) );
          }
@@ -230,9 +236,9 @@ public final class Board extends JPanel
    {
       int newPlayerPiece = piece.toUpperCase().equals("X") ? PIECE_X : PIECE_O;
 
-      if(playerPiece != newPlayerPiece)
+      if (playerPiece != newPlayerPiece)
       {
-         //change the player's piece
+         // change the player's piece
          toggleBoard();
          playerPiece = newPlayerPiece;
       }
@@ -243,14 +249,14 @@ public final class Board extends JPanel
     */
    private boolean checkForWinner(int checkPiece)
    {
-      //iterate through all the winning combinations of cells. If the player controls
-      //all cells in at least one of these combinations, then they have won.
+      // iterate through all the winning combinations of cells. If the player controls
+      // all cells in at least one of these combinations, then they have won.
       for(int i = 0; i < winningCombinations.length; i++)
       {
          boolean winnerForCurrentCombination = true;
 
-         //check the next combination. Don't need to keep checking if one of the cells
-         //is not controlled by this player
+         // check the next combination. Don't need to keep checking if one of the cells
+         // is not controlled by this player
          for(int j = 0; (j < winningCombinations[i].length) && winnerForCurrentCombination; j++)
          {
             if( (moves[winningCombinations[i][j]] == null) || (moves[winningCombinations[i][j]].intValue() != checkPiece) )
@@ -259,7 +265,7 @@ public final class Board extends JPanel
             }
          }
 
-         if(winnerForCurrentCombination)
+         if (winnerForCurrentCombination)
          {
             return true;
          }
@@ -275,32 +281,32 @@ public final class Board extends JPanel
     */
    private void addMove(int cellIndex, boolean isUsersMove)
    {
-      if(moves[cellIndex] == null)
+      if (moves[cellIndex] == null)
       {
          int whichPiece = isUsersMove ? playerPiece : oppositePiece(playerPiece);
 
-         //place the piece
+         // place the piece
          moves[cellIndex] = new Integer(whichPiece);
          numMoves++;
 
-         acceptingMoves = !isUsersMove; //change turns
+         acceptingMoves = !isUsersMove; // change turns
          drawBoard();
 
-         if(isUsersMove)
+         if (isUsersMove)
          {
-            //send this move to the opponent
+            // send this move to the opponent
             playerNode.sendMove(Cell.toMoveXML(cellIndex));
          }
 
-         if(numMoves >= 5)
+         if (numMoves >= 5)
          {
             //check for end of match (can't possibly happen with less than 5 moves)
 
-            if(checkForWinner(whichPiece))
+            if (checkForWinner(whichPiece))
             {
-               //the player who had this turn has won the match
+               // the player who had this turn has won the match
 
-               if(isUsersMove)
+               if (isUsersMove)
                {
                   playerNode.won();
                }
@@ -309,7 +315,7 @@ public final class Board extends JPanel
                   playerNode.lost();
                }
             }
-            else if(numMoves == NUM_CELLS)
+            else if (numMoves == NUM_CELLS)
             {
                playerNode.catsGame();
             }
@@ -326,17 +332,17 @@ public final class Board extends JPanel
       if( (x >= X_OFFSET) && (x <= (X_OFFSET + NUM_COLUMNS * BLOCK_WIDTH)) &&
           (y >= Y_OFFSET) && (y <= (Y_OFFSET +    NUM_ROWS * BLOCK_WIDTH)) )
       {
-         //mouse point is in the board
+         // mouse point is in the board
 
-         int cellColumn = (x - X_OFFSET) / BLOCK_WIDTH; //cellColumn is 0, 1, or 2 for left column, middle column, and right column, respectively
-         int cellRow = (y - Y_OFFSET) / BLOCK_WIDTH; //cellRow is 0, 1, or 2 for top row, middle row, and bottom row, respectively
+         int cellColumn = (x - X_OFFSET) / BLOCK_WIDTH; // cellColumn is 0, 1, or 2 for left column, middle column, and right column, respectively
+         int cellRow = (y - Y_OFFSET) / BLOCK_WIDTH; // cellRow is 0, 1, or 2 for top row, middle row, and bottom row, respectively
 
-         //compute the cell index from the row and column
+         // compute the cell index from the row and column
          return (cellRow * NUM_COLUMNS) + cellColumn;
       }
       else
       {
-         //mouse point is not in the board
+         // mouse point is not in the board
          return -1;
       }
    }
@@ -350,7 +356,7 @@ public final class Board extends JPanel
    {
       int cellIndex = getCellIndexFromMousePoint(x, y);
 
-      if(cellIndex != -1)
+      if (cellIndex != -1)
       {
          addMove(cellIndex, true);
       }
@@ -363,7 +369,7 @@ public final class Board extends JPanel
     */
    public void addOpponentMove(String x, String y)
    {
-      //get the name of the cell (TOP_LEFT, BOTTOM_RIGHT, etc.)
+      // get the name of the cell (TOP_LEFT, BOTTOM_RIGHT, etc.)
       String cellName = y.toUpperCase() + "_" + x.toUpperCase();
 
       int cellIndex = Cell.valueOf(cellName).getIndex();
@@ -383,44 +389,45 @@ public final class Board extends JPanel
    /*
     * Draws the board.
     */
+   @Override
    protected void paintComponent(Graphics g)
    {
-      //Tell the base class (JPanel) to do what needs to be done
+      // Tell the base class (JPanel) to do what needs to be done
       super.paintComponent(g);
 
-      //Tic-Tac-Toe hash and pieces are black
-      g.setColor(new Color((float)0, (float)0, (float)0));
+      // Tic-Tac-Toe hash and pieces are black
+      g.setColor(new Color((float) 0, (float) 0, (float) 0));
 
-      //draw Tic-Tac-Toe hash
+      // draw Tic-Tac-Toe hash
       g.drawLine(X_OFFSET + BLOCK_WIDTH, Y_OFFSET, X_OFFSET + BLOCK_WIDTH,  Y_OFFSET + (3 * BLOCK_WIDTH)); //left vertical line
       g.drawLine(X_OFFSET + (2 * BLOCK_WIDTH), Y_OFFSET, X_OFFSET + (2 * BLOCK_WIDTH), Y_OFFSET + (3 * BLOCK_WIDTH)); //right vertical line
       g.drawLine(X_OFFSET, Y_OFFSET + BLOCK_WIDTH, X_OFFSET + (3 * BLOCK_WIDTH), Y_OFFSET + BLOCK_WIDTH); //top horizontal line
       g.drawLine(X_OFFSET, Y_OFFSET + (2 * BLOCK_WIDTH), X_OFFSET + (3 * BLOCK_WIDTH), Y_OFFSET + (2 * BLOCK_WIDTH)); //bottom horizontal line
 
-      //draw the pieces (if any)
-      if(numMoves > 0)
+      // draw the pieces (if any)
+      if (numMoves > 0)
       {
-         for(int i = 0; i < moves.length; i++)
+         for (int i = 0; i < moves.length; i++)
          {
-            if(moves[i] != null)
+            if (moves[i] != null)
             {
-               //there's a piece in this cell, so draw it
+               // there's a piece in this cell, so draw it
 
-               int x = i % NUM_COLUMNS; //x is either 0, 1, or 2, for left column, middle column, or right column respectively
-               int y = i / NUM_COLUMNS; //y is either 0, 1, or 2, for top row, middle row, or bottom row respectively
+               int x = i % NUM_COLUMNS; // x is either 0, 1, or 2, for left column, middle column, or right column respectively
+               int y = i / NUM_COLUMNS; // y is either 0, 1, or 2, for top row, middle row, or bottom row respectively
 
-               int left = X_OFFSET + (x * BLOCK_WIDTH) + INNER_OFFSET; //left is the number of pixels from the left of the JPanel's drawing area to the left of the piece
-               int top  = Y_OFFSET + (y * BLOCK_WIDTH) + INNER_OFFSET; //top is the number of pixels from the top of the JPanel's drawing area to the top of the piece
+               int left = X_OFFSET + (x * BLOCK_WIDTH) + INNER_OFFSET; // left is the number of pixels from the left of the JPanel's drawing area to the left of the piece
+               int top  = Y_OFFSET + (y * BLOCK_WIDTH) + INNER_OFFSET; // top is the number of pixels from the top of the JPanel's drawing area to the top of the piece
 
                if(moves[i].intValue() == PIECE_X)
                {
-                  //draw an X
+                  // draw an X
                   g.drawLine(left, top, left + PIECE_WIDTH, top + PIECE_WIDTH); // the \ part of the X
                   g.drawLine(left, top + PIECE_WIDTH, left + PIECE_WIDTH, top); // the / part of the X
                }
                else
                {
-                  //draw an O
+                  // draw an O
                   g.drawOval(left, top, PIECE_WIDTH, PIECE_WIDTH);
                }
             }

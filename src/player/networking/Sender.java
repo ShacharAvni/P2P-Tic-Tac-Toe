@@ -10,13 +10,14 @@
 
 package player.networking;
 
-import player.networking.messages.ParameterNames;
+import javax.xml.namespace.QName;
+import javax.xml.rpc.ParameterMode;
 
 import org.apache.axis.client.Call;
 import org.apache.axis.client.Service;
 import org.apache.axis.encoding.XMLType;
-import javax.xml.namespace.QName;
-import javax.xml.rpc.ParameterMode;
+
+import player.networking.messages.ParameterNames;
 
 /*
  * Sender is a utility class that handles the transmission of
@@ -83,37 +84,37 @@ public final class Sender
 
       try
       {
-         //instantiate the Axis Call object
+         // instantiate the Axis Call object
          call = (Call) service.createCall();
          call.setTargetEndpointAddress(new java.net.URL(endpoint));
       }
-      catch(javax.xml.rpc.ServiceException e)
+      catch (javax.xml.rpc.ServiceException e)
       {
          throw new WebServiceException(e.getMessage());
       }
-      catch(java.net.MalformedURLException e)
+      catch (java.net.MalformedURLException e)
       {
          throw new WebServiceException(e.getMessage());
       }
 
       call.setOperationName(functionName);
 
-      //set all parameter names and types
-      for(int iParam = 0; iParam < numParams; iParam++)
+      // set all parameter names and types
+      for (int iParam = 0; iParam < numParams; iParam++)
       {
          call.addParameter(paramNames[iParam], XMLType.XSD_STRING, ParameterMode.IN);
       }
 
       call.setReturnType(returnType);
 
-      //call the web service function
+      // call the web service function
       try
       {
          return call.invoke(params);
       }
-      catch(java.rmi.RemoteException e)
+      catch (java.rmi.RemoteException e)
       {
-         if(isStrangeAxisException(e.getMessage()))
+         if (isStrangeAxisException(e.getMessage()))
          {
             throw new StrangeAxisException();
          }
@@ -171,12 +172,12 @@ public final class Sender
     */
    public static void removeSubscriber(String endpoint, String playerURL) throws WebServiceException, StrangeAxisException
    {
-      String paramNames[] = {ParameterNames.Topic, ParameterNames.URL};
+      String paramNames[] = { ParameterNames.Topic, ParameterNames.URL };
 
-      //remove the player from the "join" topic subscriber list
+      // remove the player from the "join" topic subscriber list
       callWebserviceFunction(endpoint, "removeSubscriber", 2, XMLType.XSD_ANYTYPE, new Object[] {"join", playerURL}, paramNames);
 
-      //remove the player from the "leave" topic subscriber list
+      // remove the player from the "leave" topic subscriber list
       callWebserviceFunction(endpoint, "removeSubscriber", 2, XMLType.XSD_ANYTYPE, new Object[] {"leave", playerURL}, paramNames);
    }
 
@@ -186,12 +187,12 @@ public final class Sender
     */
    public static void addSubscriber(String endpoint, String playerURL) throws WebServiceException, StrangeAxisException
    {
-      String paramNames[] = {ParameterNames.Topic, ParameterNames.URL};
+      String paramNames[] = { ParameterNames.Topic, ParameterNames.URL };
 
-      //add the player to the "join" topic subscriber list
+      // add the player to the "join" topic subscriber list
       callWebserviceFunction(endpoint, "addSubscriber", 2, XMLType.XSD_ANYTYPE, new Object[] {"join", playerURL}, paramNames);
 
-      //add the player to the "leave" topic subscriber list
+      // add the player to the "leave" topic subscriber list
       callWebserviceFunction(endpoint, "addSubscriber", 2, XMLType.XSD_ANYTYPE, new Object[] {"leave", playerURL}, paramNames);
    }
 

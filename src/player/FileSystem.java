@@ -10,9 +10,9 @@
 
 package player;
 
- /*
-  * The FileSystem class is a utility class for functions involving files.
-  */
+/*
+ * The FileSystem class is a utility class for functions involving files.
+ */
 
 public final class FileSystem
 {
@@ -24,12 +24,12 @@ public final class FileSystem
       try
       {
          String fullPathToJar = c.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
- 
+
          int indexOfLastSlash = fullPathToJar.lastIndexOf('/');
- 
+
          return fullPathToJar.substring(0, indexOfLastSlash + 1);
       }
-      catch(java.net.URISyntaxException e)
+      catch (java.net.URISyntaxException e)
       {
          Logger.logError("Failed to get the executing directory", e);
          return "";

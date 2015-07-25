@@ -10,10 +10,14 @@
 
 package player.networking.messages;
 
-import player.networking.*;
-import player.networking.node.*;
-
 import org.apache.axis.encoding.XMLType;
+
+import player.networking.Endpoint;
+import player.networking.Sender;
+import player.networking.StrangeAxisException;
+import player.networking.WebServiceException;
+import player.networking.node.ConnectionState;
+import player.networking.node.PlayerNode;
 
 /*
  * A Forfeit Message is sent to notify the opponent that the user has
@@ -51,38 +55,37 @@ public class Forfeit extends Message
     * that we have forfeited the current match. In this case "data" is just a
     * dummy parameter and it is only needed to maintain the send API.
     */
+   @Override
    protected void send(final Endpoint endpoint, final Object data)
    {
       final String snapshotUserName = playerNode.getConnectionState().getUserName();
 
-      PlayerNode.startThread
-      (
-         new Runnable()
+      PlayerNode.startThread(new Runnable()
+      {
+         @Override
+         public void run()
          {
-            public void run()
+            try
             {
-               try
-               {
-                  //Forfeit is implemented as a web service function returning void and taking two parameters:
-                  //(1) the user name, and (2) the URL of the player sending the Forfeit (both Strings)
-                  Object params[] = {snapshotUserName, playerNode.getListeningURL()};
-                  String paramNames[] = {ParameterNames.UserName, ParameterNames.URL};
+               // Forfeit is implemented as a web service function returning void and taking two parameters:
+               // (1) the user name, and (2) the URL of the player sending the Forfeit (both Strings)
+               Object params[] = { snapshotUserName, playerNode.getListeningURL() };
+               String paramNames[] = { ParameterNames.UserName, ParameterNames.URL };
 
-                  Sender.callWebserviceFunction(endpoint.url, "forfeit", 2, XMLType.XSD_ANYTYPE, params, paramNames);
-               }
-               catch (StrangeAxisException e)
-               {
-               }
-               catch (WebServiceException e)
-               {
-                  //An error occurred while sending the forfeit. The player doesn't care that
-                  //there was an error since they've already stopped the match. Log the error
-                  //for posterity.
-                  player.Logger.logError("Error in forfeiting match with: " + endpoint.userName, e);
-               }
+               Sender.callWebserviceFunction(endpoint.url, "forfeit", 2, XMLType.XSD_ANYTYPE, params, paramNames);
+            }
+            catch (StrangeAxisException e)
+            {
+            }
+            catch (WebServiceException e)
+            {
+               // An error occurred while sending the forfeit. The player doesn't care that
+               // there was an error since they've already stopped the match. Log the error
+               // for posterity.
+               player.Logger.logError("Error in forfeiting match with: " + endpoint.userName, e);
             }
          }
-      );
+      });
    }
 
    /*
@@ -90,17 +93,18 @@ public class Forfeit extends Message
     * is parsed from the SOAP. We accept the Forfeit if the player sending the Forfeit
     * matches the player we're playing against.
     */
+   @Override
    protected void receive()
    {
       final ConnectionState connectionState = playerNode.getConnectionState();
 
-      if(connectionState.getPlaying())
+      if (connectionState.getPlaying())
       {
          Endpoint forfeitingEndpoint = new Endpoint(Message.parseArg(ParameterNames.URL, soap), Message.parseArg(ParameterNames.UserName, soap));
          Endpoint currentPlayingEndpoint = connectionState.getPlayingEndpoint();
 
          boolean isForfeitFromOpponent = forfeitingEndpoint.url.equals(currentPlayingEndpoint.url);
-         if(isForfeitFromOpponent)
+         if (isForfeitFromOpponent)
          {
             playerNode.endGame(player.ui.GUI.MessageType.INFORMATION, forfeitingEndpoint.userName + " has forfeited! You Win!", forfeitingEndpoint.userName + " has forfeited! You Win!");
          }

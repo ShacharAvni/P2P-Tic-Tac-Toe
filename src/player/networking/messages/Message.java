@@ -10,8 +10,8 @@
 
 package player.networking.messages;
 
-import player.networking.node.PlayerNode;
 import player.networking.Endpoint;
+import player.networking.node.PlayerNode;
 
 /*
  * The Message class represents a message that can be sent from the PlayerNode
@@ -26,8 +26,8 @@ import player.networking.Endpoint;
 
 public abstract class Message
 {
-   protected String soap; //the SOAP of this Message (this is retrieved by the Receiver)
-   protected PlayerNode playerNode; //the PlayerNode that this Message is sent from or received to
+   protected String soap; // the SOAP of this Message (this is retrieved by the Receiver)
+   protected PlayerNode playerNode; // the PlayerNode that this Message is sent from or received to
 
    /*
     * Message Constructor.
@@ -49,8 +49,8 @@ public abstract class Message
     */
    protected static String parseArg(String paramName, String soapMsg)
    {
-      //an argument is of the form <paramName xsi:type="xsd:string">(something)</paramName>
-      //We are interested in parsing out the (something)
+      // an argument is of the form <paramName xsi:type="xsd:string">(something)</paramName>
+      // We are interested in parsing out the (something)
 
       return player.Parser.findGroup(soapMsg, "<" + paramName + " xsi:type=\"xsd:string\">" + "([^<]*?)" + "</" + paramName + ">", 1);
    }

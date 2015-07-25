@@ -10,10 +10,14 @@
 
 package player.networking.messages;
 
-import player.networking.*;
-import player.networking.node.*;
-
 import org.apache.axis.encoding.XMLType;
+
+import player.networking.Endpoint;
+import player.networking.Sender;
+import player.networking.StrangeAxisException;
+import player.networking.WebServiceException;
+import player.networking.node.ConnectionState;
+import player.networking.node.PlayerNode;
 
 /*
  * A Confirmation Message is sent by a player who has received
@@ -57,25 +61,26 @@ public class Confirmation extends Message
     * determine who gets the first move, send that as part of the "yes" Confirmation, and start the game.
     * Otherwise, we send a "no" Confirmation to the other player letting them know the game should not begin.
     */
+   @Override
    protected void send(final Endpoint endpoint, final Object data)
    {
       String confirmation = data.toString();
 
       final ConnectionState connectionState = playerNode.getConnectionState();
 
-      if(confirmation.equals("yes"))
+      if (confirmation.equals("yes"))
       {
-         //In this case the Confirmation is "yes". Send a Confirmation and block until the Confirmation
-         //is sent. This is important since the game is about to begin
+         // In this case the Confirmation is "yes". Send a Confirmation and block until the Confirmation
+         // is sent. This is important since the game is about to begin
 
-         //randomly determine who gets the first move
+         // randomly determine who gets the first move
          boolean receivingPlayerGetsFirstMove = (new java.util.Random()).nextBoolean();
 
          try
          {
             doSend(endpoint.url, new Endpoint(playerNode.getListeningURL(), connectionState.getUserName()), new ConfirmationData(true, receivingPlayerGetsFirstMove));
 
-            //Confirmation sent successfully. Start the game!
+            // Confirmation sent successfully. Start the game!
             playerNode.startGame(endpoint, !receivingPlayerGetsFirstMove);
          }
          catch (WebServiceException e)
@@ -87,29 +92,27 @@ public class Confirmation extends Message
       {
          //In this case the Confirmation is "no". Send the Confirmation in another thread.
 
-         //Use a copy of the userName in case it changes in the interim.
+         // Use a copy of the userName in case it changes in the interim.
          final String snapshotUserName = connectionState.getUserName();
 
-         PlayerNode.startThread
-         (
-            new Runnable()
+         PlayerNode.startThread(new Runnable()
+         {
+            @Override
+            public void run()
             {
-               public void run()
+               try
                {
-                  try
-                  {
-                     doSend(endpoint.url, new Endpoint(playerNode.getListeningURL(), snapshotUserName), new ConfirmationData(false, false));
-                  }
-                  catch (WebServiceException e)
-                  {
-                     //Error occurred in sending the Confirmation. In this case, the player doesn't care
-                     //since the player sending the affirmative response was not the one we were waiting
-                     //for. Log the error for posterity.
-                     player.Logger.logError("Error in sending negative Confirmation to: " + endpoint.userName + " at " + endpoint.url, e);
-                  }
+                  doSend(endpoint.url, new Endpoint(playerNode.getListeningURL(), snapshotUserName), new ConfirmationData(false, false));
+               }
+               catch (WebServiceException e)
+               {
+                  // Error occurred in sending the Confirmation. In this case, the player doesn't care
+                  // since the player sending the affirmative response was not the one we were waiting
+                  // for. Log the error for posterity.
+                  player.Logger.logError("Error in sending negative Confirmation to: " + endpoint.userName + " at " + endpoint.url, e);
                }
             }
-         );
+         });
       }
    }
 
@@ -119,6 +122,7 @@ public class Confirmation extends Message
     * parsed from the SOAP. If the Confirmation is "yes" (and the Confirmation is from the player
     * we expected), then the game is started.
     */
+   @Override
    protected void receive()
    {
       String confirmation = Message.parseArg(ParameterNames.Answer, soap);
@@ -132,7 +136,7 @@ public class Confirmation extends Message
          connectionState.setWaitingConfirmation(false);
          connectionState.setWaitingConfirmationURL("");
 
-         if(confirmation.equals("yes"))
+         if (confirmation.equals("yes"))
          {
             playerNode.startGame(confirmingEndpoint, hasFirstMove.equals("yes"));
          }
@@ -150,15 +154,16 @@ public class Confirmation extends Message
    {
       try
       {
-         //Confirmation is implemented as a web service function returning void and taking four parameters:
-         //(1) the confirmation ("yes" or "no"), (2) whether the player receiving the confirmation gets the
-         //first move ("yes" or "no", note: "no" is always sent here if the confirmation is a "no")), (3) the
-         //user name, and (4) the URL of the player sending the Confirmation (all Strings)
+         // Confirmation is implemented as a web service function returning void and taking four parameters:
+         // (1) the confirmation ("yes" or "no"), (2) whether the player receiving the confirmation gets the
+         // first move ("yes" or "no", note: "no" is always sent here if the confirmation is a "no")), (3) the
+         // user name, and (4) the URL of the player sending the Confirmation (all Strings)
 
-         ConfirmationData confirmationData = (ConfirmationData)data;
+         ConfirmationData confirmationData = (ConfirmationData) data;
 
          Object params[] = { confirmationData.confirmed ? "yes" : "no", ( confirmationData.confirmed && confirmationData.hasFirstMove ) ? "yes" : "no",
                              thisEndpoint.userName, thisEndpoint.url };
+
          String paramNames[] = {ParameterNames.Answer, ParameterNames.HasFirstMove, ParameterNames.UserName, ParameterNames.URL};
 
          Sender.callWebserviceFunction(endpoint, "confirmation", 4, XMLType.XSD_ANYTYPE, params, paramNames);

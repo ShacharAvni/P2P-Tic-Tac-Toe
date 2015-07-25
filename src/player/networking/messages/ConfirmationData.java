@@ -16,8 +16,8 @@ package player.networking.messages;
  */
 public final class ConfirmationData
 {
-   public boolean confirmed; //true if the Confirmation is "yes"
-   public boolean hasFirstMove; //true if the player receiving the Confirmation gets the first move
+   public boolean confirmed; // true if the Confirmation is "yes"
+   public boolean hasFirstMove; // true if the player receiving the Confirmation gets the first move
 
    public ConfirmationData(boolean confirmationIsYes, boolean receivingPlayerHasFirstMove)
    {

@@ -47,6 +47,7 @@ public class Update extends Message
     * Sends an Update Message. (The Update is sent by the Registry, not
     * by the player).
     */
+   @Override
    protected void send(final Endpoint endpoint, final Object data)
    {
    }
@@ -55,6 +56,7 @@ public class Update extends Message
     * Receives an Update Message. The topic (either "join" or "leave") and the user name of the player
     * that either joined or left is parsed from the SOAP. This info is simply passed to the playerNode.
     */
+   @Override
    protected void receive()
    {
       playerNode.update(Message.parseArg(ParameterNames.Topic, soap), Message.parseArg(ParameterNames.UserName, soap));

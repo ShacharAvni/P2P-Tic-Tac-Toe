@@ -10,9 +10,9 @@
 
 package player;
 
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /*
  * Parser is a utility class that handles String parsing.

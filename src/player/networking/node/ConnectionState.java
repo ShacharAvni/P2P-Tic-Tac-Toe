@@ -10,10 +10,10 @@
 
 package player.networking.node;
 
+import java.util.concurrent.Semaphore;
+
 import player.Logger;
 import player.networking.Endpoint;
-
-import java.util.concurrent.Semaphore;
 
 /*
  * The ConnectionState class is a storage class that contains
@@ -29,19 +29,19 @@ import java.util.concurrent.Semaphore;
 
 public final class ConnectionState implements Cloneable
 {
-   private boolean playing; //Are we currently playing a match?
+   private boolean playing; // Are we currently playing a match?
 
-   private String userName; //user name chosen for this player
+   private String userName; // user name chosen for this player
 
-   private Endpoint playingEndpoint; //user name of the opponent and full URL where the opponent resides (including http://, :, and port)
+   private Endpoint playingEndpoint; // user name of the opponent and full URL where the opponent resides (including http://, :, and port)
 
-   private boolean waitingResponse; //Have we sent an Invitation and are awaiting a Response?
-   private String waitingResponseURL; //the URL of the player from whom we're awaiting a Response
+   private boolean waitingResponse; // Have we sent an Invitation and are awaiting a Response?
+   private String waitingResponseURL; // the URL of the player from whom we're awaiting a Response
 
-   private boolean waitingConfirmation; //Have we sent a Response and are awaiting a Confirmation?
-   private String waitingConfirmationURL; //the URL of the player from whom we're awaiting a Confirmation
+   private boolean waitingConfirmation; // Have we sent a Response and are awaiting a Confirmation?
+   private String waitingConfirmationURL; // the URL of the player from whom we're awaiting a Confirmation
 
-   //This mutex is used so no synchronization errors occur when accessing the above members.
+   // This mutex is used so no synchronization errors occur when accessing the above members.
    private Semaphore mutex;
 
    /*
@@ -64,12 +64,10 @@ public final class ConnectionState implements Cloneable
    }
 
    /*
-    * Attempts to acquire the mutex protecting this
-    * object's members. The program is abruptly
-    * terminated if an InterruptedException occurs.
-    * This exception would be completely unexpected
-    * since this program does not interrupt any of
-    * its threads.
+    * Attempts to acquire the mutex protecting this object's members. The
+    * program is abruptly terminated if an InterruptedException occurs. This
+    * exception would be completely unexpected since this program does not
+    * interrupt any of its threads.
     */
    public void acquire()
    {
@@ -77,7 +75,7 @@ public final class ConnectionState implements Cloneable
       {
          mutex.acquire();
       }
-      catch(InterruptedException e)
+      catch (InterruptedException e)
       {
          Logger.fatalError("Unexpected Thread Interruption.", e);
       }
@@ -102,6 +100,7 @@ public final class ConnectionState implements Cloneable
    /*
     * Standard clone method. The cloned instance has its own mutex.
     */
+   @Override
    public ConnectionState clone()
    {
       try
@@ -109,11 +108,11 @@ public final class ConnectionState implements Cloneable
          ConnectionState cloned = (ConnectionState) super.clone();
          cloned.playingEndpoint = playingEndpoint.clone();
          cloned.mutex = new Semaphore(1);
-         return cloned; //shallow copy is OK for the rest of the members
+         return cloned; // shallow copy is OK for the rest of the members
       }
-      catch(CloneNotSupportedException e)
+      catch (CloneNotSupportedException e)
       {
-         //this should never happen
+         // this should never happen
          player.Logger.logError("Unexpected Error in cloning ConnectionState", e);
 
          ConnectionState cloned = new ConnectionState();
@@ -139,7 +138,7 @@ public final class ConnectionState implements Cloneable
 
    public void setPlaying(boolean newPlaying)
    {
-      if(acquired())
+      if (acquired())
       {
          playing = newPlaying;
       }
@@ -147,7 +146,7 @@ public final class ConnectionState implements Cloneable
 
    public void setUserName(String newUserName)
    {
-      if(acquired())
+      if (acquired())
       {
          userName = newUserName;
       }
@@ -155,7 +154,7 @@ public final class ConnectionState implements Cloneable
 
    public void setPlayingEndpoint(Endpoint newPlayingEndpoint)
    {
-      if(acquired())
+      if (acquired())
       {
          playingEndpoint = newPlayingEndpoint.clone();
       }
@@ -163,7 +162,7 @@ public final class ConnectionState implements Cloneable
 
    public void setWaitingResponse(boolean newWaitingResponse)
    {
-      if(acquired())
+      if (acquired())
       {
          waitingResponse = newWaitingResponse;
       }
@@ -171,7 +170,7 @@ public final class ConnectionState implements Cloneable
 
    public void setWaitingResponseURL(String newWaitingResponseURL)
    {
-      if(acquired())
+      if (acquired())
       {
          waitingResponseURL = newWaitingResponseURL;
       }
@@ -179,7 +178,7 @@ public final class ConnectionState implements Cloneable
 
    public void setWaitingConfirmation(boolean newWaitingConfirmation)
    {
-      if(acquired())
+      if (acquired())
       {
          waitingConfirmation = newWaitingConfirmation;
       }
@@ -187,7 +186,7 @@ public final class ConnectionState implements Cloneable
 
    public void setWaitingConfirmationURL(String newWaitingConfirmationURL)
    {
-      if(acquired())
+      if (acquired())
       {
          waitingConfirmationURL = newWaitingConfirmationURL;
       }

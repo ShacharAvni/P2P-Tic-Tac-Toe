@@ -10,10 +10,14 @@
 
 package player.networking.messages;
 
-import player.networking.*;
-import player.networking.node.*;
-
 import org.apache.axis.encoding.XMLType;
+
+import player.networking.Endpoint;
+import player.networking.Sender;
+import player.networking.StrangeAxisException;
+import player.networking.WebServiceException;
+import player.networking.node.ConnectionState;
+import player.networking.node.PlayerNode;
 
 /*
  * An Invitation Message is sent when the user wants to invite a
@@ -49,6 +53,7 @@ public class Invitation extends Message
    /*
     * Sends an Invitation Message to the player listening at "endpoint".
     */
+   @Override
    protected void send(final Endpoint endpoint, final Object data)
    {
       ConnectionState connectionState = playerNode.getConnectionState();
@@ -63,45 +68,43 @@ public class Invitation extends Message
 
       final String snapshotUserName = connectionState.getUserName();
 
-      PlayerNode.startThread
-      (
-         new Runnable()
+      PlayerNode.startThread(new Runnable()
+      {
+         @Override
+         public void run()
          {
-            public void run()
+            try
             {
+               // Invitation is implemented as a web service function returning void and taking two parameters:
+               // (1) the user name, and (2) the URL of the player sending the Invitation (both Strings)
+               Object params[] = { snapshotUserName, playerNode.getListeningURL() };
+               String paramNames[] = { ParameterNames.UserName, ParameterNames.URL };
+
+               Sender.callWebserviceFunction(endpoint.url, "invitation", 2, XMLType.XSD_ANYTYPE, params, paramNames);
+            }
+            catch (StrangeAxisException e)
+            {
+            }
+            catch (WebServiceException e)
+            {
+               // Error in sending the invitation. Show the error if this invitation is still relevant.
+               ConnectionState acquiredConnectionState = playerNode.getAndAcquireConnectionState();
+
                try
                {
-                  //Invitation is implemented as a web service function returning void and taking two parameters:
-                  //(1) the user name, and (2) the URL of the player sending the Invitation (both Strings)
-                  Object params[] = {snapshotUserName, playerNode.getListeningURL()};
-                  String paramNames[] = {ParameterNames.UserName, ParameterNames.URL};
-
-                  Sender.callWebserviceFunction(endpoint.url, "invitation", 2, XMLType.XSD_ANYTYPE, params, paramNames);
-               }
-               catch (StrangeAxisException e)
-               {
-               }
-               catch (WebServiceException e)
-               {
-                  //Error in sending the invitation. Show the error if this invitation is still relevant.
-                  ConnectionState acquiredConnectionState = playerNode.getAndAcquireConnectionState();
-
-                  try
+                  boolean invitationIsStillRelevant = acquiredConnectionState.getWaitingResponse() && (acquiredConnectionState.getWaitingResponseURL().equals(endpoint.url));
+                  if (invitationIsStillRelevant)
                   {
-                     boolean invitationIsStillRelevant = acquiredConnectionState.getWaitingResponse() && (acquiredConnectionState.getWaitingResponseURL().equals(endpoint.url));
-                     if(invitationIsStillRelevant)
-                     {
-                        playerNode.endGame(player.ui.GUI.MessageType.ERROR, "Error in sending invitation to: " + endpoint.url + ".\nPlease check the connection information provided.", "Error in sending invitation to: " + endpoint.url);
-                     }
+                     playerNode.endGame(player.ui.GUI.MessageType.ERROR, "Error in sending invitation to: " + endpoint.url + ".\nPlease check the connection information provided.", "Error in sending invitation to: " + endpoint.url);
                   }
-                  finally
-                  {
-                     acquiredConnectionState.release();
-                  }
+               }
+               finally
+               {
+                  acquiredConnectionState.release();
                }
             }
          }
-      );
+      });
    }
 
    /*
@@ -109,111 +112,110 @@ public class Invitation extends Message
     * Invitation is parsed from the SOAP. A Response Message (described in Response.java)
     * is then sent.
     */
+   @Override
    protected void receive()
    {
       final Endpoint invitingEndpoint = new Endpoint(Message.parseArg(ParameterNames.URL, soap), Message.parseArg(ParameterNames.UserName, soap));
 
       final ConnectionState connectionState = playerNode.getConnectionState();
 
-      if(connectionState.getPlaying())
+      if (connectionState.getPlaying())
       {
          playerNode.acceptSendMessage(new Response(), invitingEndpoint, "playing");
       }
-      else if(connectionState.getWaitingConfirmation())
+      else if (connectionState.getWaitingConfirmation())
       {
          playerNode.acceptSendMessage(new Response(), invitingEndpoint, "no");
       }
       else
       {
-         //Ask the user if they want to play with the player who sent the Invitation.
-         //This is done in a separate thread to allow other Messages to be received
-         //and handled.
-         PlayerNode.startThread
-         (
-            new Runnable()
+         // Ask the user if they want to play with the player who sent the Invitation.
+         // This is done in a separate thread to allow other Messages to be received
+         // and handled.
+         PlayerNode.startThread(new Runnable()
+         {
+            @Override
+            public void run()
             {
-               public void run()
+               // does this player want to play with the inviting player?
+               boolean wantToPlay = playerNode.doesUserWantToPlay(invitingEndpoint.userName, invitingEndpoint.url);
+
+               //If the user doesn't have a user name, then we need to ask them to provide one.
+               //However, getUserNameFromUser is a blocking call so we should ask for the user
+               //name before acquiring the connection state. If we see that the user has a user
+               //name after acquiring the connection state, then we don't assign them this one
+               //as the user must have entered a user name in another thread.
+               //
+               //See GUI.java for an explanation of this awkwardness.
+
+               boolean shouldChangeUserName = false;
+               String newUserName = "";
+
+               if (wantToPlay)
                {
-                  //does this player want to play with the inviting player?
-                  boolean wantToPlay = playerNode.doesUserWantToPlay(invitingEndpoint.userName, invitingEndpoint.url);
+                  String currentUserName = playerNode.getConnectionState().getUserName();
 
-                  //If the user doesn't have a user name, then we need to ask them to provide one.
-                  //However, getUserNameFromUser is a blocking call so we should ask for the user
-                  //name before acquiring the connection state. If we see that the user has a user
-                  //name after acquiring the connection state, then we don't assign them this one
-                  //as the user must have entered a user name in another thread.
-                  //
-                  //See GUI.java for an explanation of this awkwardness.
-
-                  boolean shouldChangeUserName = false;
-                  String newUserName = "";
-
-                  if(wantToPlay)
+                  if (currentUserName.equals(""))
                   {
-                     String currentUserName = playerNode.getConnectionState().getUserName();
-
-                     if(currentUserName.equals(""))
-                     {
-                        newUserName = playerNode.getUserNameFromUser();
-                        shouldChangeUserName = true;
-                     }
-                  }
-
-                  ConnectionState acquiredConnectionState = playerNode.getAndAcquireConnectionState();
-
-                  try
-                  {
-                     //since this is in another thread, this player may have started
-                     //another game already. Double check if they're already playing.
-                     boolean canPlay = !acquiredConnectionState.getPlaying() && !acquiredConnectionState.getWaitingConfirmation();
-
-                     if(wantToPlay && !canPlay)
-                     {
-                        String cantPlayReason = "";
-
-                        if(acquiredConnectionState.getPlaying())
-                        {
-                           cantPlayReason = " because you're already playing.";
-                        }
-                        else if(acquiredConnectionState.getWaitingConfirmation())
-                        {
-                           cantPlayReason = " because you've already accepted an invitation.";
-                        }
-
-                        playerNode.showMessage("Could not start a match with " + invitingEndpoint.userName + cantPlayReason, player.ui.GUI.MessageType.ERROR);
-                     }
-
-                     //assign the new user name, if applicable
-                     if(shouldChangeUserName && acquiredConnectionState.getUserName().equals(""))
-                     {
-                        acquiredConnectionState.setUserName(newUserName);
-                     }
-
-                     //send the Response
-                     String response = "";
-
-                     if(acquiredConnectionState.getPlaying())
-                     {
-                        response = "playing";
-                     }
-                     else if(acquiredConnectionState.getWaitingConfirmation())
-                     {
-                        response = "no";
-                     }
-                     else
-                     {
-                        response = wantToPlay ? "yes" : "no";
-                     }
-
-                     playerNode.acceptSendMessage(new Response(), invitingEndpoint, response);
-                  }
-                  finally
-                  {
-                     acquiredConnectionState.release();
+                     newUserName = playerNode.getUserNameFromUser();
+                     shouldChangeUserName = true;
                   }
                }
+
+               ConnectionState acquiredConnectionState = playerNode.getAndAcquireConnectionState();
+
+               try
+               {
+                  // since this is in another thread, this player may have started
+                  // another game already. Double check if they're already playing.
+                  boolean canPlay = !acquiredConnectionState.getPlaying() && !acquiredConnectionState.getWaitingConfirmation();
+
+                  if (wantToPlay && !canPlay)
+                  {
+                     String cantPlayReason = "";
+
+                     if (acquiredConnectionState.getPlaying())
+                     {
+                        cantPlayReason = " because you're already playing.";
+                     }
+                     else if (acquiredConnectionState.getWaitingConfirmation())
+                     {
+                        cantPlayReason = " because you've already accepted an invitation.";
+                     }
+
+                     playerNode.showMessage("Could not start a match with " + invitingEndpoint.userName + cantPlayReason, player.ui.GUI.MessageType.ERROR);
+                  }
+
+                  // assign the new user name, if applicable
+                  if (shouldChangeUserName && acquiredConnectionState.getUserName().equals(""))
+                  {
+                     acquiredConnectionState.setUserName(newUserName);
+                  }
+
+                  // send the Response
+                  String response = "";
+
+                  if (acquiredConnectionState.getPlaying())
+                  {
+                     response = "playing";
+                  }
+                  else if (acquiredConnectionState.getWaitingConfirmation())
+                  {
+                     response = "no";
+                  }
+                  else
+                  {
+                     response = wantToPlay ? "yes" : "no";
+                  }
+
+                  playerNode.acceptSendMessage(new Response(), invitingEndpoint, response);
+               }
+               finally
+               {
+                  acquiredConnectionState.release();
+               }
             }
-         );
+         });
       }
    }
 

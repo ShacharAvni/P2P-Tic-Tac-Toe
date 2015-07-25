@@ -10,12 +10,14 @@
 
 package player;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Date;
 
- /*
-  * The Logger class is responsible for logging errors.
-  */
+/*
+ * The Logger class is responsible for logging errors.
+ */
 
 public final class Logger
 {
@@ -34,12 +36,12 @@ public final class Logger
          errorLog.write(message);
          errorLog.newLine();
 
-         //write the stack trace to the error log (if applicable)
-         if(exception != null)
+         // write the stack trace to the error log (if applicable)
+         if (exception != null)
          {
             StackTraceElement[] stackTrace = exception.getStackTrace();
 
-            for(StackTraceElement stackTraceElement : stackTrace)
+            for (StackTraceElement stackTraceElement : stackTrace)
             {
                errorLog.write(stackTraceElement.toString());
                errorLog.newLine();
@@ -50,14 +52,14 @@ public final class Logger
 
          errorLog.close();
       }
-      catch(IOException e)
+      catch (IOException e)
       {
-         //we probably don't have a console but it doesn't hurt to
-         //try writing this anyway
+         // we probably don't have a console but it doesn't hurt to
+         // try writing this anyway
          System.err.println("Error printing the following error to the log file:");
          System.err.println(message);
 
-         if(exception != null)
+         if (exception != null)
          {
             exception.printStackTrace();
          }

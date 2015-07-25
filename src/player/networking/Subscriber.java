@@ -27,10 +27,10 @@ package player.networking;
 public interface Subscriber
 {
    /*
-    * The update method gets called when the publisher, i.e. the
-     * Registry, updates for a given topic. Here, topic can be
-    * either "join" or "leave" and "userName" is the user name of the
-    * player either joining or leaving the network.
+    * The update method gets called when the publisher, i.e. the Registry,
+    * updates for a given topic. Here, topic can be either "join" or "leave" and
+    * "userName" is the user name of the player either joining or leaving the
+    * network.
     */
    public void update(String topic, String userName);
 }

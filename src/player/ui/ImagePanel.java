@@ -10,8 +10,10 @@
 
 package player.ui;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Graphics;
+
+import javax.swing.ImageIcon;
+import javax.swing.JPanel;
 
 /*
  * An ImagePanel is a JPanel that has an image for its background.
@@ -23,7 +25,7 @@ public final class ImagePanel extends JPanel
 {
    private static final long serialVersionUID = 1L;
 
-   //relative file location of the image
+   // relative file location of the image
    private String imageLocation;
 
    /*
@@ -39,11 +41,12 @@ public final class ImagePanel extends JPanel
     * Draws the image stored in the file imageLocation
     * as the background of the Panel.
     */
+   @Override
    protected void paintComponent(Graphics g)
    {
       ImageIcon icon = new ImageIcon(imageLocation);
 
-      //scale image to the size of the panel
+      // scale image to the size of the panel
       g.drawImage(icon.getImage(), 0, 0, getSize().width, getSize().height, null);
 
       super.paintComponent(g);

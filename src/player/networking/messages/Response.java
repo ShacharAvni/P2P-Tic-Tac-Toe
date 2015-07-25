@@ -10,10 +10,14 @@
 
 package player.networking.messages;
 
-import player.networking.*;
-import player.networking.node.*;
-
 import org.apache.axis.encoding.XMLType;
+
+import player.networking.Endpoint;
+import player.networking.Sender;
+import player.networking.StrangeAxisException;
+import player.networking.WebServiceException;
+import player.networking.node.ConnectionState;
+import player.networking.node.PlayerNode;
 
 /*
  * A Response Message is sent as a response to a player that sent an
@@ -55,66 +59,65 @@ public class Response extends Message
     * Sends a Response to the player listening at "endpoint". If the Response is "yes", then
     * the game is started with the opponent receiving the first move.
     */
+   @Override
    protected void send(final Endpoint endpoint, final Object data)
    {
       final String response = data.toString();
 
       ConnectionState connectionState = playerNode.getConnectionState();
 
-      if(response.equals("yes"))
+      if (response.equals("yes"))
       {
          connectionState.setWaitingConfirmation(true);
          connectionState.setWaitingConfirmationURL(endpoint.url);
          playerNode.allowInvitations(false);
       }
 
-      //send a Response in another thread. Use a copy of the user name
-      //in case it changes in the interim.
+      // send a Response in another thread. Use a copy of the user name
+      // in case it changes in the interim.
 
       final String snapshotUserName = connectionState.getUserName();
 
-      PlayerNode.startThread
-      (
-         new Runnable()
+      PlayerNode.startThread(new Runnable()
+      {
+         @Override
+         public void run()
          {
-            public void run()
+            try
             {
+               // Response is implemented as a webservice function that returns void and accepts three parameters:
+               // (1) the response (either "yes", "no", or "playing"), (2) the user name, and (3) the URL of the
+               // player sending the Response (all Strings)
+               Object params[] = { response, snapshotUserName, playerNode.getListeningURL() };
+               String paramNames[] = { ParameterNames.Answer, ParameterNames.UserName, ParameterNames.URL };
+
+               Sender.callWebserviceFunction(endpoint.url, "response", 3, XMLType.XSD_ANYTYPE, params, paramNames);
+            }
+            catch (StrangeAxisException e)
+            {
+            }
+            catch (WebServiceException e)
+            {
+               // Error occurred in sending the Response to url. Show an error if this Response is still relevant.
+               ConnectionState acquiredConnectionState = playerNode.getAndAcquireConnectionState();
+
                try
                {
-                  //Response is implemented as a webservice function that returns void and accepts three parameters:
-                  //(1) the response (either "yes", "no", or "playing"), (2) the user name, and (3) the URL of the
-                  //player sending the Response (all Strings)
-                  Object params[] = {response, snapshotUserName, playerNode.getListeningURL()};
-                  String paramNames[] = {ParameterNames.Answer, ParameterNames.UserName, ParameterNames.URL};
-
-                  Sender.callWebserviceFunction(endpoint.url, "response", 3, XMLType.XSD_ANYTYPE, params, paramNames);
-               }
-               catch (StrangeAxisException e)
-               {
-               }
-               catch (WebServiceException e)
-               {
-                  //Error occurred in sending the Response to url. Show an error if this Response is still relevant.
-                  ConnectionState acquiredConnectionState = playerNode.getAndAcquireConnectionState();
-
-                  try
+                  boolean responseIsStillRelevant = acquiredConnectionState.getWaitingConfirmation() && acquiredConnectionState.getWaitingConfirmationURL().equals(endpoint.url);
+                  if (responseIsStillRelevant)
                   {
-                     boolean responseIsStillRelevant = acquiredConnectionState.getWaitingConfirmation() && acquiredConnectionState.getWaitingConfirmationURL().equals(endpoint.url);
-                     if(responseIsStillRelevant)
-                     {
-                        acquiredConnectionState.setWaitingConfirmation(false);
-                        acquiredConnectionState.setWaitingConfirmationURL("");
-                        playerNode.endGame(player.ui.GUI.MessageType.ERROR, "Error in sending response to: " + endpoint.userName + "\nThey may have lost their connection or may have left", "Administration says: Error in sending response to: " + endpoint.userName);
-                     }
+                     acquiredConnectionState.setWaitingConfirmation(false);
+                     acquiredConnectionState.setWaitingConfirmationURL("");
+                     playerNode.endGame(player.ui.GUI.MessageType.ERROR, "Error in sending response to: " + endpoint.userName + "\nThey may have lost their connection or may have left", "Administration says: Error in sending response to: " + endpoint.userName);
                   }
-                  finally
-                  {
-                     acquiredConnectionState.release();
-                  }
+               }
+               finally
+               {
+                  acquiredConnectionState.release();
                }
             }
          }
-      );
+      });
    }
 
    /*
@@ -122,6 +125,7 @@ public class Response extends Message
     * the Response is parsed from the SOAP. If the Response is "yes", then this player sends
     * a Confirmation Message, specifying whether or not the game will begin.
     */
+   @Override
    protected void receive()
    {
       String response = Message.parseArg(ParameterNames.Answer, soap);
@@ -129,30 +133,30 @@ public class Response extends Message
 
       ConnectionState connectionState = playerNode.getConnectionState();
 
-      //is the player who sent this Response the one we're currently waiting for?
+      // is the player who sent this Response the one we're currently waiting for?
       boolean responseIsFromExpectedPlayer = connectionState.getWaitingResponse() && connectionState.getWaitingResponseURL().equals(respondingEndpoint.url);
 
-      if(responseIsFromExpectedPlayer)
+      if (responseIsFromExpectedPlayer)
       {
          connectionState.setWaitingResponse(false);
          connectionState.setWaitingResponseURL("");
       }
 
-      if(response.equals("yes"))
+      if (response.equals("yes"))
       {
-         //a Confirmation must be sent to any player who responded with a "yes".
+         // a Confirmation must be sent to any player who responded with a "yes".
          playerNode.acceptSendMessage(new Confirmation(), respondingEndpoint, responseIsFromExpectedPlayer ? "yes" : "no");
       }
-      else if(responseIsFromExpectedPlayer)
+      else if (responseIsFromExpectedPlayer)
       {
-         //response is either "no" or "playing". Either way, a game is not started.
+         // response is either "no" or "playing". Either way, a game is not started.
          String cantPlayMessage = "";
 
-         if(response.equals("playing"))
+         if (response.equals("playing"))
          {
             cantPlayMessage = respondingEndpoint.userName + " is in the midst of a heated battle.\nTry again later.";
          }
-         else if(respondingEndpoint.userName.equals(""))
+         else if (respondingEndpoint.userName.equals(""))
          {
             cantPlayMessage = "The player at " + respondingEndpoint.url + " has reluctantly passed off your offer";
          }
