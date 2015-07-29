@@ -19,7 +19,7 @@ public final class FileSystem
    /*
     * Get the absolute path of the jar file where Class c resides
     */
-   public static String getExecutingDirectory(Class c)
+   public static String getExecutingDirectory(Class<?> c)
    {
       try
       {
